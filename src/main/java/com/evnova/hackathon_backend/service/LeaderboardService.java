@@ -1,4 +1,8 @@
 package com.evnova.hackathon_backend.service;
 
-public class LeaderboardService {
+import com.evnova.hackathon_backend.dto.SubmissionDTO;
+import java.util.List;
+
+public interface LeaderboardService {
+    List<SubmissionDTO.Response> getLeaderboard(Long hackathonId);
 }

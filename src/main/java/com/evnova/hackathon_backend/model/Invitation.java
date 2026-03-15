@@ -1,6 +1,5 @@
 package com.evnova.hackathon_backend.model;
 
-import com.evnova.hackathon_backend.enums.Role;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,25 +9,24 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "users")
+@Table(name = "invitations")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class User {
+public class Invitation {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String name;
+    @ManyToOne
+    @JoinColumn(name = "team_id")
+    private Team team;
 
-    @Column(unique = true,nullable = false)
     private String email;
 
-    private String password;
-
-    @Enumerated(EnumType.STRING)
-    private Role role;
+    private String status; // PENDING, ACCEPTED, REJECTED
 
     private LocalDateTime createdAt;
 }

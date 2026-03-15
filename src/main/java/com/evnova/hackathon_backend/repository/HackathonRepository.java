@@ -1,4 +1,25 @@
 package com.evnova.hackathon_backend.repository;
 
-public class HackathonRepository {
+import com.evnova.hackathon_backend.model.Hackathon;
+import com.evnova.hackathon_backend.model.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface HackathonRepository extends JpaRepository<Hackathon, Long> {
+
+    List<Hackathon> findByOrganizer(User organizer);
+
+    List<Hackathon> findByStatus(String status);
+
+    @Query("SELECT h FROM Hackathon h WHERE " +
+            "(:search IS NULL OR LOWER(h.title) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
+            "(:status IS NULL OR h.status = :status)")
+    List<Hackathon> findBySearchAndStatus(@Param("search") String search, @Param("status") String status);
+
+    long countByOrganizer(User organizer);
 }
