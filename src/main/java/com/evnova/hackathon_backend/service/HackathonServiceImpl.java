@@ -9,6 +9,7 @@ import com.evnova.hackathon_backend.model.Participants;
 import com.evnova.hackathon_backend.model.User;
 import com.evnova.hackathon_backend.repository.HackathonRepository;
 import com.evnova.hackathon_backend.repository.ParticipantRepository;
+import com.evnova.hackathon_backend.repository.TeamRepository;
 import com.evnova.hackathon_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
