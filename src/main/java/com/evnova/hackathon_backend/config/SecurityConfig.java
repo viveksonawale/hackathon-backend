@@ -47,6 +47,7 @@ public class SecurityConfig {
                         // Swagger UI endpoints
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/health").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         
                         // Role-based endpoints
                         .requestMatchers("/api/organizer/**").hasAuthority("ROLE_ORGANIZER")
@@ -85,9 +86,13 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:8081"));
+        configuration.setAllowedOrigins(Arrays.asList(
+                "https://mini-project-flame-theta.vercel.app",
+                "http://localhost:5173",
+                "http://localhost:8081"
+        ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept", "X-Requested-With"));
+        configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);
         
