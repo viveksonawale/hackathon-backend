@@ -1,15 +1,18 @@
 package com.evnova.hackathon_backend.service;
 
 import com.evnova.hackathon_backend.dto.SubmissionDTO;
+import com.evnova.hackathon_backend.dto.TeamDTO;
 import com.evnova.hackathon_backend.exception.ResourceNotFoundException;
 import com.evnova.hackathon_backend.exception.UnauthorizedException;
 import com.evnova.hackathon_backend.exception.ValidationException;
 import com.evnova.hackathon_backend.model.Hackathon;
 import com.evnova.hackathon_backend.model.Submission;
 import com.evnova.hackathon_backend.model.Team;
+import com.evnova.hackathon_backend.model.TeamMember;
 import com.evnova.hackathon_backend.model.User;
 import com.evnova.hackathon_backend.repository.HackathonRepository;
 import com.evnova.hackathon_backend.repository.SubmissionRepository;
+import com.evnova.hackathon_backend.repository.TeamMemberRepository;
 import com.evnova.hackathon_backend.repository.TeamRepository;
 import com.evnova.hackathon_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +20,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,6 +30,7 @@ public class SubmissionServiceImpl implements SubmissionService {
 
     private final SubmissionRepository submissionRepository;
     private final TeamRepository teamRepository;
+    private final TeamMemberRepository teamMemberRepository;
     private final HackathonRepository hackathonRepository;
     private final UserRepository userRepository;
 
@@ -40,6 +45,9 @@ public class SubmissionServiceImpl implements SubmissionService {
         User user = getAuthenticatedUser();
         Hackathon hackathon = hackathonRepository.findById(hackathonId)
                 .orElseThrow(() -> new ResourceNotFoundException("Hackathon not found"));
+        if (hackathon.getEndDate() != null && LocalDate.now().isAfter(hackathon.getEndDate())) {
+            throw new ValidationException("Submission deadline has passed");
+        }
 
         // Find the team the user leads for this hackathon
         Team team = teamRepository.findByLeader(user).stream()
@@ -76,6 +84,9 @@ public class SubmissionServiceImpl implements SubmissionService {
         if (!submission.getTeam().getLeader().getId().equals(user.getId())) {
             throw new UnauthorizedException("Only the team leader can update the submission");
         }
+        if (submission.getHackathon().getEndDate() != null && LocalDate.now().isAfter(submission.getHackathon().getEndDate())) {
+            throw new ValidationException("Submission updates are closed after deadline");
+        }
 
         submission.setProjectName(request.getProjectName());
         submission.setDescription(request.getDescription());
@@ -91,6 +102,10 @@ public class SubmissionServiceImpl implements SubmissionService {
     public SubmissionDTO.Response getSubmissionById(Long submissionId) {
         Submission submission = submissionRepository.findById(submissionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Submission not found"));
+        User user = getAuthenticatedUser();
+        if (!submission.getHackathon().getOrganizer().getId().equals(user.getId())) {
+            throw new UnauthorizedException("Only organizer can view this submission detail");
+        }
         return mapToDTO(submission);
     }
 
@@ -100,6 +115,19 @@ public class SubmissionServiceImpl implements SubmissionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Team not found"));
         Submission submission = submissionRepository.findByTeam(team)
                 .orElseThrow(() -> new ResourceNotFoundException("No submission found for this team"));
+        return mapToDTO(submission);
+    }
+
+    @Override
+    public SubmissionDTO.Response getMySubmission(Long hackathonId) {
+        User user = getAuthenticatedUser();
+        Hackathon hackathon = hackathonRepository.findById(hackathonId)
+                .orElseThrow(() -> new ResourceNotFoundException("Hackathon not found"));
+        Team team = teamMemberRepository.findFirstByUserAndTeam_Hackathon(user, hackathon)
+                .map(TeamMember::getTeam)
+                .orElseThrow(() -> new ResourceNotFoundException("You are not in a team for this hackathon"));
+        Submission submission = submissionRepository.findByTeamAndHackathon(team, hackathon)
+                .orElseThrow(() -> new ResourceNotFoundException("Submission not found"));
         return mapToDTO(submission);
     }
 
@@ -132,6 +160,19 @@ public class SubmissionServiceImpl implements SubmissionService {
                 s.getTeam().getId(),
                 s.getTeam().getName(),
                 s.getHackathon().getId(),
+                new TeamDTO.Response.LeaderInfo(
+                        s.getTeam().getLeader().getId(),
+                        s.getTeam().getLeader().getName(),
+                        s.getTeam().getLeader().getEmail()
+                ),
+                teamMemberRepository.findByTeam(s.getTeam()).stream()
+                        .map(m -> new TeamDTO.Response.MemberInfo(
+                                m.getUser().getId(),
+                                m.getUser().getName(),
+                                m.getUser().getEmail(),
+                                m.getRole()
+                        ))
+                        .collect(Collectors.toList()),
                 s.getProjectName(),
                 s.getDescription(),
                 s.getGithubUrl(),

@@ -9,32 +9,26 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "invitations")
+@Table(name = "notifications")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Invitation {
-
+public class Notification {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "team_id")
-    private Team team;
+    @JoinColumn(name = "recipient_id")
+    private User recipient;
 
-    @ManyToOne
-    @JoinColumn(name = "invited_user_id")
-    private User invitedUser;
+    private String type;
 
-    @ManyToOne
-    @JoinColumn(name = "invited_by_user_id")
-    private User invitedBy;
+    @Column(length = 500)
+    private String message;
 
-    private String status; // PENDING, ACCEPTED, REJECTED
+    private boolean read;
 
     private LocalDateTime createdAt;
-
-    private LocalDateTime respondedAt;
 }

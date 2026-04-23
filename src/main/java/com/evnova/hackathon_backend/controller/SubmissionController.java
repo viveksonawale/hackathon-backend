@@ -33,10 +33,22 @@ public class SubmissionController {
         return ResponseEntity.ok(submissionService.updateSubmission(submissionId, request));
     }
 
+    @GetMapping("/participant/hackathons/{hackathonId}/my-submission")
+    @PreAuthorize("hasAuthority('ROLE_PARTICIPANT')")
+    public ResponseEntity<SubmissionDTO.Response> getMySubmission(@PathVariable Long hackathonId) {
+        return ResponseEntity.ok(submissionService.getMySubmission(hackathonId));
+    }
+
     @GetMapping("/organizer/hackathons/{hackathonId}/submissions")
     @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
     public ResponseEntity<List<SubmissionDTO.Response>> getHackathonSubmissions(@PathVariable Long hackathonId) {
         return ResponseEntity.ok(submissionService.getHackathonSubmissions(hackathonId));
+    }
+
+    @GetMapping("/organizer/submissions/{submissionId}")
+    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    public ResponseEntity<SubmissionDTO.Response> getSubmissionDetail(@PathVariable Long submissionId) {
+        return ResponseEntity.ok(submissionService.getSubmissionById(submissionId));
     }
 
     @PostMapping("/organizer/submissions/{submissionId}/score")

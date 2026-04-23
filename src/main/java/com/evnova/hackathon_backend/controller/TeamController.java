@@ -1,5 +1,6 @@
 package com.evnova.hackathon_backend.controller;
 
+import com.evnova.hackathon_backend.dto.InvitationDTO;
 import com.evnova.hackathon_backend.dto.TeamDTO;
 import com.evnova.hackathon_backend.service.TeamService;
 import jakarta.validation.Valid;
@@ -36,6 +37,12 @@ public class TeamController {
         return ResponseEntity.ok(teamService.getMyTeam(hackathonId));
     }
 
+    @GetMapping("/participant/teams/{teamId}")
+    @PreAuthorize("hasAuthority('ROLE_PARTICIPANT')")
+    public ResponseEntity<TeamDTO.Response> getTeamDetail(@PathVariable Long teamId) {
+        return ResponseEntity.ok(teamService.getTeamById(teamId));
+    }
+
     @PutMapping("/participant/teams/{teamId}")
     @PreAuthorize("hasAuthority('ROLE_PARTICIPANT')")
     public ResponseEntity<TeamDTO.Response> updateTeam(
@@ -50,6 +57,25 @@ public class TeamController {
             @PathVariable Long teamId,
             @Valid @RequestBody TeamDTO.InviteRequest request) {
         teamService.inviteMember(teamId, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/participant/invitations")
+    @PreAuthorize("hasAuthority('ROLE_PARTICIPANT')")
+    public ResponseEntity<List<InvitationDTO.Response>> getMyInvitations() {
+        return ResponseEntity.ok(teamService.getMyInvitations());
+    }
+
+    @PostMapping("/participant/invitations/{id}/accept")
+    @PreAuthorize("hasAuthority('ROLE_PARTICIPANT')")
+    public ResponseEntity<TeamDTO.Response> acceptInvitation(@PathVariable Long id) {
+        return ResponseEntity.ok(teamService.acceptInvitation(id));
+    }
+
+    @PostMapping("/participant/invitations/{id}/reject")
+    @PreAuthorize("hasAuthority('ROLE_PARTICIPANT')")
+    public ResponseEntity<Void> rejectInvitation(@PathVariable Long id) {
+        teamService.rejectInvitation(id);
         return ResponseEntity.ok().build();
     }
 

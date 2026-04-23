@@ -1,6 +1,6 @@
 package com.evnova.hackathon_backend.controller;
 
-import com.evnova.hackathon_backend.dto.SubmissionDTO;
+import com.evnova.hackathon_backend.dto.LeaderboardDTO;
 import com.evnova.hackathon_backend.service.LeaderboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +19,7 @@ public class LeaderboardController {
     private final LeaderboardService leaderboardService;
 
     @GetMapping("/{hackathonId}/leaderboard")
-    public ResponseEntity<List<SubmissionDTO.Response>> getLeaderboard(@PathVariable Long hackathonId) {
+    public ResponseEntity<List<LeaderboardDTO.Entry>> getLeaderboard(@PathVariable Long hackathonId) {
         return ResponseEntity.ok(leaderboardService.getLeaderboard(hackathonId));
     }
 }

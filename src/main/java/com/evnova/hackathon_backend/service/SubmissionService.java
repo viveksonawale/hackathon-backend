@@ -9,6 +9,7 @@ public interface SubmissionService {
     SubmissionDTO.Response updateSubmission(Long submissionId, SubmissionDTO.Request request);
     SubmissionDTO.Response getSubmissionById(Long submissionId);
     SubmissionDTO.Response getTeamSubmission(Long teamId);
+    SubmissionDTO.Response getMySubmission(Long hackathonId);
     List<SubmissionDTO.Response> getHackathonSubmissions(Long hackathonId);
     void scoreSubmission(Long submissionId, Double score);
 }

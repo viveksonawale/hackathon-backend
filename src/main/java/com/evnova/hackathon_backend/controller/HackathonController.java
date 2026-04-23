@@ -1,6 +1,7 @@
 package com.evnova.hackathon_backend.controller;
 
 import com.evnova.hackathon_backend.dto.HackathonDTO;
+import com.evnova.hackathon_backend.dto.PagedResponse;
 import com.evnova.hackathon_backend.service.HackathonService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,9 +19,12 @@ public class HackathonController {
     private final HackathonService hackathonService;
 
     @GetMapping
-    public ResponseEntity<List<HackathonDTO.Response>> getAllHackathons(
-            @RequestParam(required = false) String status) {
-        return ResponseEntity.ok(hackathonService.getAllHackathons(status));
+    public ResponseEntity<PagedResponse<HackathonDTO.Response>> getAllHackathons(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(hackathonService.getAllHackathons(status, search, page, size));
     }
 
     @GetMapping("/{id}")

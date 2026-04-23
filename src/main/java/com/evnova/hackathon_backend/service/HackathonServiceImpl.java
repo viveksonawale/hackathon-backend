@@ -1,6 +1,7 @@
 package com.evnova.hackathon_backend.service;
 
 import com.evnova.hackathon_backend.dto.HackathonDTO;
+import com.evnova.hackathon_backend.dto.PagedResponse;
 import com.evnova.hackathon_backend.exception.ResourceNotFoundException;
 import com.evnova.hackathon_backend.exception.UnauthorizedException;
 import com.evnova.hackathon_backend.exception.ValidationException;
@@ -15,7 +16,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -49,7 +52,7 @@ public class HackathonServiceImpl implements HackathonService {
                 .endDate(request.getEndDate())
                 .registrationDeadline(request.getRegistrationDeadline())
                 .maxTeamSize(request.getMaxTeamSize() != null ? request.getMaxTeamSize() : 4)
-                .status("Upcoming")
+                .status("UPCOMING")
                 .organizer(organizer)
                 .problemStatement(request.getProblemStatement())
                 .goals(request.getGoals())
@@ -116,14 +119,22 @@ public class HackathonServiceImpl implements HackathonService {
     }
 
     @Override
-    public List<HackathonDTO.Response> getAllHackathons(String status) {
-        List<Hackathon> hackathons;
-        if (status != null && !status.isEmpty()) {
-            hackathons = hackathonRepository.findByStatus(status);
-        } else {
-            hackathons = hackathonRepository.findAll();
-        }
-        return hackathons.stream().map(this::mapToDTO).collect(Collectors.toList());
+    public PagedResponse<HackathonDTO.Response> getAllHackathons(String status, String search, int page, int size) {
+        String normalizedStatus = (status == null || status.isBlank()) ? null : status.toUpperCase();
+        String normalizedSearch = (search == null || search.isBlank()) ? null : search.trim();
+        List<Hackathon> hackathons = hackathonRepository.findBySearchAndStatus(normalizedSearch, normalizedStatus)
+                .stream()
+                .sorted(Comparator.comparing(Hackathon::getCreatedAt).reversed())
+                .collect(Collectors.toList());
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.max(size, 1);
+        int start = Math.min(safePage * safeSize, hackathons.size());
+        int end = Math.min(start + safeSize, hackathons.size());
+        List<HackathonDTO.Response> items = hackathons.subList(start, end).stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+        int totalPages = (int) Math.ceil((double) hackathons.size() / safeSize);
+        return new PagedResponse<>(items, safePage, safeSize, hackathons.size(), totalPages);
     }
 
     @Override
@@ -162,6 +173,7 @@ public class HackathonServiceImpl implements HackathonService {
     }
     
     private HackathonDTO.Response mapToDTO(Hackathon hackathon) {
+        applyAutoStatus(hackathon);
         HackathonDTO.Response.OrganizerInfo orgInfo = new HackathonDTO.Response.OrganizerInfo(
                 hackathon.getOrganizer().getId(),
                 hackathon.getOrganizer().getName(),
@@ -192,5 +204,16 @@ public class HackathonServiceImpl implements HackathonService {
                 (int) participants,
                 (int) teams
         );
+    }
+
+    private void applyAutoStatus(Hackathon hackathon) {
+        LocalDate now = LocalDate.now();
+        if (hackathon.getStartDate() != null && now.isBefore(hackathon.getStartDate())) {
+            hackathon.setStatus("UPCOMING");
+        } else if (hackathon.getEndDate() != null && now.isAfter(hackathon.getEndDate())) {
+            hackathon.setStatus("COMPLETED");
+        } else {
+            hackathon.setStatus("ACTIVE");
+        }
     }
 }

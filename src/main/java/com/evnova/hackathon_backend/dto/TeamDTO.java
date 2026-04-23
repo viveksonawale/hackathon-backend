@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 public class TeamDTO {
@@ -25,6 +26,7 @@ public class TeamDTO {
         private Long id;
         private String name;
         private Long hackathonId;
+        private HackathonInfo hackathon;
         private LocalDateTime createdAt;
         private LeaderInfo leader;
         private List<MemberInfo> members;
@@ -46,6 +48,17 @@ public class TeamDTO {
             private String name;
             private String email;
             private String role;
+        }
+
+        @Data
+        @AllArgsConstructor
+        @NoArgsConstructor
+        public static class HackathonInfo {
+            private Long id;
+            private String title;
+            private LocalDate startDate;
+            private LocalDate endDate;
+            private String status;
         }
     }
 

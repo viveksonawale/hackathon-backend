@@ -1,5 +1,6 @@
 package com.evnova.hackathon_backend.service;
 
+import com.evnova.hackathon_backend.dto.InvitationDTO;
 import com.evnova.hackathon_backend.dto.TeamDTO;
 import com.evnova.hackathon_backend.exception.ResourceNotFoundException;
 import com.evnova.hackathon_backend.exception.UnauthorizedException;
@@ -24,6 +25,8 @@ public class TeamServiceImpl implements TeamService {
     private final HackathonRepository hackathonRepository;
     private final UserRepository userRepository;
     private final ParticipantRepository participantRepository;
+    private final InvitationRepository invitationRepository;
+    private final NotificationService notificationService;
 
     private User getAuthenticatedUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -44,6 +47,9 @@ public class TeamServiceImpl implements TeamService {
 
         if (teamRepository.existsByHackathonAndLeader(hackathon, leader)) {
             throw new ValidationException("You are already leading a team in this hackathon");
+        }
+        if (teamMemberRepository.existsByUserAndTeam_Hackathon(leader, hackathon)) {
+            throw new ValidationException("You are already in a team in this hackathon");
         }
 
         Team team = Team.builder()
@@ -85,6 +91,11 @@ public class TeamServiceImpl implements TeamService {
     public TeamDTO.Response getTeamById(Long teamId) {
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new ResourceNotFoundException("Team not found"));
+        User user = getAuthenticatedUser();
+        if (!teamMemberRepository.existsByTeamAndUser(team, user)
+                && !team.getHackathon().getOrganizer().getId().equals(user.getId())) {
+            throw new UnauthorizedException("You are not allowed to view this team");
+        }
         return mapToDTO(team);
     }
 
@@ -103,10 +114,7 @@ public class TeamServiceImpl implements TeamService {
         Hackathon hackathon = hackathonRepository.findById(hackathonId)
                 .orElseThrow(() -> new ResourceNotFoundException("Hackathon not found"));
         
-        // Find if user is a member of any team in this hackathon
-        return teamMemberRepository.findAll().stream()
-                .filter(tm -> tm.getUser().getId().equals(user.getId()) && tm.getTeam().getHackathon().getId().equals(hackathonId))
-                .findFirst()
+        return teamMemberRepository.findFirstByUserAndTeam_Hackathon(user, hackathon)
                 .map(tm -> mapToDTO(tm.getTeam()))
                 .orElseThrow(() -> new ResourceNotFoundException("You are not in a team for this hackathon"));
     }
@@ -131,6 +139,12 @@ public class TeamServiceImpl implements TeamService {
         if (teamMemberRepository.existsByTeamAndUser(team, invitee)) {
             throw new ValidationException("User is already a member of this team");
         }
+        if (teamMemberRepository.existsByUserAndTeam_Hackathon(invitee, team.getHackathon())) {
+            throw new ValidationException("User is already in another team in this hackathon");
+        }
+        if (invitationRepository.existsByTeamAndInvitedUserAndStatus(team, invitee, "PENDING")) {
+            throw new ValidationException("A pending invitation already exists for this user");
+        }
 
         // Check max team size
         long currentMembers = teamMemberRepository.findByTeam(team).size();
@@ -138,13 +152,80 @@ public class TeamServiceImpl implements TeamService {
             throw new ValidationException("Team size limit reached");
         }
 
-        TeamMember member = TeamMember.builder()
-                .user(invitee)
+        Invitation invitation = Invitation.builder()
                 .team(team)
-                .role("MEMBER")
+                .invitedUser(invitee)
+                .invitedBy(leader)
+                .status("PENDING")
+                .createdAt(LocalDateTime.now())
                 .build();
+        invitationRepository.save(invitation);
+        notificationService.createForUser(
+                invitee.getId(),
+                "INVITATION",
+                "You have been invited to join team " + team.getName()
+        );
+    }
 
-        teamMemberRepository.save(member);
+    @Override
+    public List<InvitationDTO.Response> getMyInvitations() {
+        User user = getAuthenticatedUser();
+        return invitationRepository.findByInvitedUserOrderByCreatedAtDesc(user).stream()
+                .map(this::mapInvitationToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public TeamDTO.Response acceptInvitation(Long invitationId) {
+        User user = getAuthenticatedUser();
+        Invitation invitation = invitationRepository.findById(invitationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Invitation not found"));
+        if (!invitation.getInvitedUser().getId().equals(user.getId())) {
+            throw new UnauthorizedException("Only invited user can accept this invitation");
+        }
+        if (!"PENDING".equals(invitation.getStatus())) {
+            throw new ValidationException("Invitation is already processed");
+        }
+        Team team = invitation.getTeam();
+        if (teamMemberRepository.existsByUserAndTeam_Hackathon(user, team.getHackathon())) {
+            throw new ValidationException("You are already in a team in this hackathon");
+        }
+        long currentMembers = teamMemberRepository.findByTeam(team).size();
+        if (currentMembers >= team.getHackathon().getMaxTeamSize()) {
+            throw new ValidationException("Team size limit reached");
+        }
+        teamMemberRepository.save(TeamMember.builder().team(team).user(user).role("MEMBER").build());
+        invitation.setStatus("ACCEPTED");
+        invitation.setRespondedAt(LocalDateTime.now());
+        invitationRepository.save(invitation);
+        notificationService.createForUser(
+                invitation.getInvitedBy().getId(),
+                "INVITATION_ACCEPTED",
+                user.getName() + " accepted your invitation to " + team.getName()
+        );
+        return mapToDTO(team);
+    }
+
+    @Override
+    public void rejectInvitation(Long invitationId) {
+        User user = getAuthenticatedUser();
+        Invitation invitation = invitationRepository.findById(invitationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Invitation not found"));
+        if (!invitation.getInvitedUser().getId().equals(user.getId())) {
+            throw new UnauthorizedException("Only invited user can reject this invitation");
+        }
+        if (!"PENDING".equals(invitation.getStatus())) {
+            throw new ValidationException("Invitation is already processed");
+        }
+        invitation.setStatus("REJECTED");
+        invitation.setRespondedAt(LocalDateTime.now());
+        invitationRepository.save(invitation);
+        notificationService.createForUser(
+                invitation.getInvitedBy().getId(),
+                "INVITATION_REJECTED",
+                user.getName() + " rejected your invitation to " + invitation.getTeam().getName()
+        );
     }
 
     @Override
@@ -212,6 +293,13 @@ public class TeamServiceImpl implements TeamService {
                 team.getId(),
                 team.getName(),
                 team.getHackathon().getId(),
+                new TeamDTO.Response.HackathonInfo(
+                        team.getHackathon().getId(),
+                        team.getHackathon().getTitle(),
+                        team.getHackathon().getStartDate(),
+                        team.getHackathon().getEndDate(),
+                        team.getHackathon().getStatus()
+                ),
                 team.getCreatedAt(),
                 new TeamDTO.Response.LeaderInfo(
                         team.getLeader().getId(),
@@ -219,6 +307,23 @@ public class TeamServiceImpl implements TeamService {
                         team.getLeader().getEmail()
                 ),
                 memberInfos
+        );
+    }
+
+    private InvitationDTO.Response mapInvitationToDTO(Invitation invitation) {
+        return new InvitationDTO.Response(
+                invitation.getId(),
+                invitation.getStatus(),
+                invitation.getCreatedAt(),
+                invitation.getTeam().getId(),
+                invitation.getTeam().getName(),
+                invitation.getTeam().getHackathon().getId(),
+                invitation.getTeam().getHackathon().getTitle(),
+                new InvitationDTO.UserBasic(
+                        invitation.getInvitedBy().getId(),
+                        invitation.getInvitedBy().getName(),
+                        invitation.getInvitedBy().getEmail()
+                )
         );
     }
 }

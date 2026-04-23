@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class SubmissionDTO {
 
@@ -31,6 +32,8 @@ public class SubmissionDTO {
         private Long teamId;
         private String teamName;
         private Long hackathonId;
+        private TeamDTO.Response.LeaderInfo leader;
+        private List<TeamDTO.Response.MemberInfo> members;
         private String projectName;
         private String description;
         private String githubUrl;
