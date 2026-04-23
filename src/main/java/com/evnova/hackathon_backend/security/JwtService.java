@@ -16,15 +16,20 @@ import java.util.Map;
 @Component
 public class JwtService {
 
-    @Value("${jwt.secret}")
+    @Value("${jwt.secret:default_secret_key_that_is_at_least_32_characters_long_for_hs256}")
     private String secretKey;
 
-    @Value("${jwt.expiration}")
+    @Value("${jwt.expiration:86400000}")
     private long expiration;
 
     private SecretKey getSigningKey() {
-        byte[] keyBytes = Base64.getDecoder().decode(secretKey);
-        return Keys.hmacShaKeyFor(keyBytes);
+        try {
+            byte[] keyBytes = Base64.getDecoder().decode(secretKey);
+            return Keys.hmacShaKeyFor(keyBytes);
+        } catch (IllegalArgumentException e) {
+            // Fallback for non-base64 secrets
+            return Keys.hmacShaKeyFor(secretKey.getBytes());
+        }
     }
 
     public String generateToken(User user) {
