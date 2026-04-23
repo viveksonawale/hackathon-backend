@@ -17,7 +17,7 @@ public class CorsConfig {
                         .allowedOrigins(
                                 "https://mini-project-flame-theta.vercel.app",
                                 "http://localhost:5173",
-                                "http://localhost:8081"
+                                "http://localhost:8080"
                         )
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
                         .allowedHeaders("*")
