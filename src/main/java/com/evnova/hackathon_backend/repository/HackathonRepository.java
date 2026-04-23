@@ -17,9 +17,9 @@ public interface HackathonRepository extends JpaRepository<Hackathon, Long> {
     List<Hackathon> findByStatus(String status);
 
     @Query("SELECT h FROM Hackathon h WHERE " +
-            "(:search IS NULL OR LOWER(h.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
-            "OR LOWER(h.description) LIKE LOWER(CONCAT('%', :search, '%'))) AND " +
-            "(:status IS NULL OR UPPER(h.status) = UPPER(:status))")
+            "(cast(:search as string) IS NULL OR LOWER(h.title) LIKE LOWER(CONCAT('%', cast(:search as string), '%')) " +
+            "OR LOWER(h.description) LIKE LOWER(CONCAT('%', cast(:search as string), '%'))) AND " +
+            "(cast(:status as string) IS NULL OR UPPER(h.status) = UPPER(cast(:status as string)))")
     List<Hackathon> findBySearchAndStatus(@Param("search") String search, @Param("status") String status);
 
     long countByOrganizer(User organizer);

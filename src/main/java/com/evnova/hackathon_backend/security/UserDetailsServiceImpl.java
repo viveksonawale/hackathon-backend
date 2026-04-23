@@ -22,10 +22,16 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
+        java.util.List<org.springframework.security.core.authority.SimpleGrantedAuthority> authorities = new java.util.ArrayList<>();
+        authorities.add(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
+        if (user.getRole() == com.evnova.hackathon_backend.enums.Role.ORGANIZER) {
+            authorities.add(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_PARTICIPANT"));
+        }
+
         return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getEmail())
                 .password(user.getPassword())
-                .authorities(List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())))
+                .authorities(authorities)
                 .build();
     }
 }
