@@ -54,6 +54,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/hackathons/**").permitAll()
                         .requestMatchers("/health").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/seed").permitAll()
                         
                         // Swagger UI / OpenAPI
                         .requestMatchers(

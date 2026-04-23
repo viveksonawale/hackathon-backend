@@ -103,8 +103,12 @@ public class SubmissionServiceImpl implements SubmissionService {
         Submission submission = submissionRepository.findById(submissionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Submission not found"));
         User user = getAuthenticatedUser();
-        if (!submission.getHackathon().getOrganizer().getId().equals(user.getId())) {
-            throw new UnauthorizedException("Only organizer can view this submission detail");
+        
+        boolean isOrganizer = submission.getHackathon().getOrganizer().getId().equals(user.getId());
+        boolean isMember = teamMemberRepository.existsByTeamAndUser(submission.getTeam(), user);
+        
+        if (!isOrganizer && !isMember) {
+            throw new UnauthorizedException("You are not allowed to view this submission");
         }
         return mapToDTO(submission);
     }
@@ -123,12 +127,16 @@ public class SubmissionServiceImpl implements SubmissionService {
         User user = getAuthenticatedUser();
         Hackathon hackathon = hackathonRepository.findById(hackathonId)
                 .orElseThrow(() -> new ResourceNotFoundException("Hackathon not found"));
+        
+        // Find team
         Team team = teamMemberRepository.findFirstByUserAndTeam_Hackathon(user, hackathon)
                 .map(TeamMember::getTeam)
                 .orElseThrow(() -> new ResourceNotFoundException("You are not in a team for this hackathon"));
-        Submission submission = submissionRepository.findByTeamAndHackathon(team, hackathon)
-                .orElseThrow(() -> new ResourceNotFoundException("Submission not found"));
-        return mapToDTO(submission);
+        
+        // Find submission
+        return submissionRepository.findByTeamAndHackathon(team, hackathon)
+                .map(this::mapToDTO)
+                .orElse(null); // Return null if not yet submitted instead of throwing 404
     }
 
     @Override

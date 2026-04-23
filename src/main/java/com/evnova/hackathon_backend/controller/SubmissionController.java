@@ -45,8 +45,8 @@ public class SubmissionController {
         return ResponseEntity.ok(submissionService.getHackathonSubmissions(hackathonId));
     }
 
-    @GetMapping("/organizer/submissions/{submissionId}")
-    @PreAuthorize("hasAuthority('ROLE_ORGANIZER')")
+    @GetMapping("/submissions/{submissionId}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ORGANIZER', 'ROLE_PARTICIPANT')")
     public ResponseEntity<SubmissionDTO.Response> getSubmissionDetail(@PathVariable Long submissionId) {
         return ResponseEntity.ok(submissionService.getSubmissionById(submissionId));
     }

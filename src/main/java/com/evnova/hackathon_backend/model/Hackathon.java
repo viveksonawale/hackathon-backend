@@ -59,4 +59,6 @@ public class Hackathon {
     private List<String> rules;
 
     private LocalDateTime createdAt;
+
+    private String bannerImageUrl;
 }

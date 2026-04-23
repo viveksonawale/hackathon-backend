@@ -67,6 +67,7 @@ public class HackathonDTO {
         private List<String> rules;
         private Integer participants;
         private Integer teams;
+        private String bannerImageUrl;
 
         @Data
         @AllArgsConstructor

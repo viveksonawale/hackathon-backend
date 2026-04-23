@@ -202,7 +202,8 @@ public class HackathonServiceImpl implements HackathonService {
                 hackathon.getGoals(),
                 hackathon.getRules(),
                 (int) participants,
-                (int) teams
+                (int) teams,
+                hackathon.getBannerImageUrl()
         );
     }
 

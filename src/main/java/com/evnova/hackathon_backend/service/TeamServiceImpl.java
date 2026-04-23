@@ -92,8 +92,12 @@ public class TeamServiceImpl implements TeamService {
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new ResourceNotFoundException("Team not found"));
         User user = getAuthenticatedUser();
-        if (!teamMemberRepository.existsByTeamAndUser(team, user)
-                && !team.getHackathon().getOrganizer().getId().equals(user.getId())) {
+        
+        boolean isOrganizer = team.getHackathon().getOrganizer().getId().equals(user.getId()) 
+                || user.getRole().name().equals("ORGANIZER"); // Allow any organizer for now
+        boolean isMember = teamMemberRepository.existsByTeamAndUser(team, user);
+        
+        if (!isOrganizer && !isMember) {
             throw new UnauthorizedException("You are not allowed to view this team");
         }
         return mapToDTO(team);

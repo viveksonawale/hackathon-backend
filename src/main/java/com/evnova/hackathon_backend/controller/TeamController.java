@@ -37,8 +37,8 @@ public class TeamController {
         return ResponseEntity.ok(teamService.getMyTeam(hackathonId));
     }
 
-    @GetMapping("/participant/teams/{teamId}")
-    @PreAuthorize("hasAuthority('ROLE_PARTICIPANT')")
+    @GetMapping("/teams/{teamId}")
+    @PreAuthorize("hasAnyAuthority('ROLE_PARTICIPANT', 'ROLE_ORGANIZER')")
     public ResponseEntity<TeamDTO.Response> getTeamDetail(@PathVariable Long teamId) {
         return ResponseEntity.ok(teamService.getTeamById(teamId));
     }
